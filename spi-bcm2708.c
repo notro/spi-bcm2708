@@ -414,7 +414,7 @@ static int bcm2708_transfer_one_message_dma(struct spi_master *master,
 	cbs[1].stride = 0;
 	cbs[1].next = bs->dma_buffer_handle + 2*sizeof(struct bcm2708_dma_cb);
 	/* and the tx-data in the second CB */
-	cbs[2].info = cbs[1].info;
+	cbs[2].info = cbs[1].info | BCM2708_DMA_WAIT_RESP;
 	if (xfer->tx_buf) {
 		cbs[2].info |= BCM2708_DMA_S_INC; /* source increment by 4 */
 		cbs[2].src = (unsigned long)xfer->tx_dma;
