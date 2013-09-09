@@ -43,6 +43,10 @@ static short mode = 2;
 module_param(mode, short, 0);
 MODULE_PARM_DESC(mode, "Processing mode: 0=polling, 1=interrupt driven, 2=dma (default)");
 
+static bool realtime;
+module_param(realtime, bool, 0);
+MODULE_PARM_DESC(realtime, "Run the driver with realtime priority");
+
 /* SPI register offsets */
 #define SPI_CS			0x00
 #define SPI_FIFO		0x04
@@ -830,7 +834,7 @@ static int __devinit bcm2708_spi_probe(struct platform_device *pdev)
 	master->num_chipselect = 3;
 	master->setup = bcm2708_spi_setup;
 	master->cleanup = bcm2708_spi_cleanup;
-	master->rt = 1;
+	master->rt = realtime;
 
 	master->prepare_transfer_hardware       = bcm2708_prepare_transfer;
 	master->transfer_one_message            = bcm2708_transfer_one_message;
