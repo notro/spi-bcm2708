@@ -37,12 +37,11 @@
 #include <linux/wait.h>
 #include <linux/dma-mapping.h>
 #include <mach/dma.h>
-
-/* module arguments to select the type of processing we do */
 #include <linux/moduleparam.h>
-static short processmode = 1;
-module_param(processmode, short, 0);
-MODULE_PARM_DESC(processmode, "Processing mode: 0=polling, 1=interrupt driven, 2=dma");
+
+static short mode = 2;
+module_param(mode, short, 0);
+MODULE_PARM_DESC(mode, "Processing mode: 0=polling, 1=interrupt driven, 2=dma (default)");
 
 /* SPI register offsets */
 #define SPI_CS			0x00
@@ -692,7 +691,7 @@ static int bcm2708_transfer_one_message(struct spi_master *master,
 		if (!(flags & FLAGS_LAST_TRANSFER))
 			state.cs |= SPI_CS_TA;
 		/* now send the message over SPI */
-		switch (processmode) {
+		switch (mode) {
 		case 0: /* polling */
 			status = bcm2708_transfer_one_message_poll(
 				master, &state, xfer, flags);
@@ -702,6 +701,7 @@ static int bcm2708_transfer_one_message(struct spi_master *master,
 				master, &state, xfer, flags);
 			break;
 		case 2: /* dma driven */
+		default:
 			if (can_dma) {
 				status = bcm2708_transfer_one_message_dma(
 					master, &state, xfer, flags
@@ -713,11 +713,6 @@ static int bcm2708_transfer_one_message(struct spi_master *master,
 					);
 				break;
 			}
-		default:
-			/* by default use the interrupt version */
-			status = bcm2708_transfer_one_message_irqdriven(
-				master, &state, xfer, flags);
-			break;
 		}
 		if (status)
 			goto exit;
@@ -800,7 +795,7 @@ static int __devinit bcm2708_spi_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct spi_master *master;
 	struct bcm2708_spi *bs;
-	const char *mode;
+	const char *modestr;
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs) {
@@ -919,23 +914,20 @@ static int __devinit bcm2708_spi_probe(struct platform_device *pdev)
 		(unsigned long)regs->start, irq);
 
 	/* now send the message over SPI */
-	switch (processmode) {
+	switch (mode) {
 	case 0:
-		mode = "polling";
+		modestr = "polling";
 		break;
 	case 1:
-		mode = "interrupt-driven";
+		modestr = "interrupt-driven";
 		break;
 	case 2:
-		mode = "dma";
-		break;
-	default: /* for unsupported modes return with errors */
-		dev_err(&pdev->dev, "Unsupported processmode %i\n",
-			processmode);
-		goto out_free_dma_irq;
+	default:
+		mode = 2;
+		modestr = "dma";
 		break;
 	}
-	dev_info(&pdev->dev, "SPI Controller running in %s mode\n", mode);
+	dev_info(&pdev->dev, "SPI Controller running in %s mode\n", modestr);
 	return 0;
 out_free_dma_irq:
 	free_irq(bs->dma_rx.irq, master);
@@ -1001,9 +993,6 @@ static struct platform_driver bcm2708_spi_driver = {
 
 static int __init bcm2708_spi_init(void)
 {
-	/* range check for processmode */
-	if ((processmode < 0) || (processmode > 3))
-		processmode = 1;
 	return platform_driver_probe(&bcm2708_spi_driver, bcm2708_spi_probe);
 }
 module_init(bcm2708_spi_init);
