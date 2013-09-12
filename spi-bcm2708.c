@@ -258,6 +258,10 @@ static int bcm2708_setup_state(struct spi_master *master,
 		state->cdiv = cdiv;
 	}
 
+	dev_dbg(dev, "%s(hz=%d, csel=%d, mode=0x%02X, bpw=%d) => "
+		"bus_hz=%lu / cdiv=%u == %lu Hz; cs 0x%08X\n",
+		__func__, hz, csel, mode, bpw, bus_hz, cdiv, bus_hz/cdiv, cs);
+
 	return 0;
 }
 
@@ -789,11 +793,6 @@ static int bcm2708_spi_setup(struct spi_device *spi)
 		spi->controller_state = NULL;
 		return ret;
 	}
-
-	dev_dbg(&spi->dev,
-		"setup: cd %d: %d Hz, bpw %u, mode 0x%x -> CS=%08x CDIV=%04x\n",
-		spi->chip_select, spi->max_speed_hz, spi->bits_per_word,
-		spi->mode, state->cs, state->cdiv);
 
 	return 0;
 }
