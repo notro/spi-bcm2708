@@ -47,6 +47,17 @@ static bool realtime;
 module_param(realtime, bool, 0);
 MODULE_PARM_DESC(realtime, "Run the driver with realtime priority");
 
+static unsigned debug;
+module_param(debug, uint, 0);
+MODULE_PARM_DESC(debug, "Turn on debug output");
+
+#undef dev_dbg
+#define dev_dbg(dev, fmt, args...)           \
+do {                                         \
+	if (unlikely(debug > 0))             \
+		dev_info(dev, fmt, ##args);  \
+} while (0)
+
 /* SPI register offsets */
 #define SPI_CS			0x00
 #define SPI_FIFO		0x04
