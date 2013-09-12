@@ -776,6 +776,7 @@ static int bcm2708_spi_setup(struct spi_device *spi)
 	if (ret < 0) {
 		kfree(state);
 		spi->controller_state = NULL;
+		return ret;
 	}
 
 	dev_dbg(&spi->dev,
