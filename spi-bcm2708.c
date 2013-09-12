@@ -204,7 +204,7 @@ static int bcm2708_setup_state(struct spi_master *master,
 		cdiv = roundup_pow_of_two(cdiv);
 
 		if (cdiv > 65536) {
-			dev_dbg(dev,
+			dev_err(dev,
 				"setup: %d Hz too slow, cdiv %u; min %ld Hz\n",
 				hz, cdiv, bus_hz / 65536);
 			return -EINVAL;
@@ -221,7 +221,7 @@ static int bcm2708_setup_state(struct spi_master *master,
 	case 8:
 		break;
 	default:
-		dev_dbg(dev, "setup: invalid bits_per_word %u (must be 8)\n",
+		dev_err(dev, "setup: invalid bits_per_word %u (must be 8)\n",
 			bpw);
 		return -EINVAL;
 	}
@@ -755,7 +755,7 @@ static int bcm2708_spi_setup(struct spi_device *spi)
 
 	if (!(spi->mode & SPI_NO_CS) &&
 		(spi->chip_select > spi->master->num_chipselect)) {
-		dev_dbg(&spi->dev,
+		dev_err(&spi->dev,
 			"setup: invalid chipselect %u (%u defined)\n",
 			spi->chip_select, spi->master->num_chipselect);
 		return -EINVAL;
