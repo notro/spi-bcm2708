@@ -244,7 +244,6 @@ static int bcm2708_setup_state(struct spi_master *master,
 			cs |= SPI_CS_CSPOL;
 			cs |= SPI_CS_CSPOL0 << csel;
 		}
-
 		cs |= csel;
 	} else {
 		cs |= SPI_CS_CS_10 | SPI_CS_CS_01;
@@ -265,25 +264,25 @@ static int bcm2708_setup_state(struct spi_master *master,
 static int bcm2708_register_dma(struct platform_device *pdev,
 				struct bcm2708_spi_dma *d,
 				struct bcm2708_dma_cb *dmabuffer,
-				const char *name) {
+				const char *name)
+{
 	int ret;
+
 	/* register DMA channel */
-	ret = bcm_dma_chan_alloc(BCM_DMA_FEATURE_FAST,
-				&d->base,
-				&d->irq);
+	ret = bcm_dma_chan_alloc(BCM_DMA_FEATURE_FAST, &d->base, &d->irq);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "couldn't allocate a DMA channel\n");
 		return ret;
 	}
 	d->chan = ret;
-	/* and write info */
 	dev_info(&pdev->dev, "DMA channel %d at address 0x%08lx with irq %d\n",
 		d->chan, (unsigned long)d->base, d->irq);
 	return 0;
 }
 
 static int bcm2708_release_dma(struct platform_device *pdev,
-			struct bcm2708_spi_dma *d) {
+			struct bcm2708_spi_dma *d)
+{
 	if (!d->base)
 		return 0;
 	bcm_dma_chan_free(d->chan);
@@ -294,7 +293,8 @@ static int bcm2708_release_dma(struct platform_device *pdev,
 }
 
 static int bcm2708_register_dmabuffer(struct platform_device *pdev,
-				struct bcm2708_spi *bs) {
+				struct bcm2708_spi *bs)
+{
 	/* for this to work you need to have set the following:
 	   in the bcm2708_spi_device definition:
 	   .dev = {
@@ -318,7 +318,8 @@ static int bcm2708_register_dmabuffer(struct platform_device *pdev,
 }
 
 static int bcm2708_release_dmabuffer(struct platform_device *pdev,
-				struct bcm2708_spi *bs) {
+				struct bcm2708_spi *bs)
+{
 	if (!bs->dma_buffer)
 		return 0;
 	dma_free_writecombine(&pdev->dev, SZ_4K,
@@ -333,6 +334,7 @@ irqreturn_t bcm2708_transfer_one_message_dma_irqhandler(int irq, void *dev)
 {
 	struct spi_master *master = dev;
 	struct bcm2708_spi *bs = spi_master_get_devdata(master);
+
 	/* mark the rx DMA-interrupt as handled
 	   - it will (level) trigger otherwise again */
 	writel(BCM2708_DMA_INT, bs->dma_rx.base+BCM2708_DMA_CS);
@@ -374,14 +376,15 @@ irqreturn_t bcm2708_transfer_one_message_dma_irqhandler(int irq, void *dev)
 static int bcm2708_transfer_one_message_dma(struct spi_master *master,
 					struct bcm2708_spi_state *stp,
 					struct spi_transfer *xfer,
-					int flags
-	) {
+					int flags)
+{
 	struct bcm2708_spi *bs = spi_master_get_devdata(master);
 	struct bcm2708_dma_cb *cbs = bs->dma_buffer;
 	u32 cs = 0;
 	/* calculate dma transfer sizes - words */
 	int dmaleninitial = 4;
 	int dmalen = xfer->len;
+
 	/* if size <=0 then return immediately and OK - nothing to do*/
 	if (xfer->len <= 0)
 		return 0;
@@ -495,33 +498,27 @@ bcm2708_transfer_one_message_irqdriven_irqhandler(int irq, void *dev_id)
 {
 
 	struct spi_master *master = dev_id;
-	char b;
 	struct bcm2708_spi *bs = spi_master_get_devdata(master);
+	char b;
+
 	spin_lock(&bs->lock);
 	/* if we got more data then write */
 	while ((bs->tx_len > 0) && (bcm2708_rd(bs, SPI_CS) & SPI_CS_TXD)) {
-		/* decide on data to send */
-		if (bs->tx_buf) {
-			b = *(bs->tx_buf);
-			(bs->tx_buf)++;
-		} else {
+		if (bs->tx_buf)
+			b = *bs->tx_buf++;
+		else
 			b = 0;
-		}
 		bcm2708_wr(bs, SPI_FIFO, b);
-		/* and decrement rx_len */
-		(bs->tx_len)--;
+		bs->tx_len--;
 	}
 	/* check for reads */
 	while (bcm2708_rd(bs, SPI_CS) & SPI_CS_RXD) {
 		/* getting byte from fifo */
 		b = bcm2708_rd(bs, SPI_FIFO);
 		/* store it if requested */
-		if (bs->rx_buf) {
-			*(bs->rx_buf) = b;
-			(bs->rx_buf)++;
-		}
-		/* and decrement rx_len */
-		(bs->rx_len)--;
+		if (bs->rx_buf)
+			*bs->rx_buf++ = b;
+		bs->rx_len--;
 	}
 	spin_unlock(&bs->lock);
 
@@ -540,12 +537,13 @@ bcm2708_transfer_one_message_irqdriven_irqhandler(int irq, void *dev_id)
 static int bcm2708_transfer_one_message_irqdriven(struct spi_master *master,
 						struct bcm2708_spi_state *stp,
 						struct spi_transfer *xfer,
-						int flags
-	) {
+						int flags)
+{
+	struct bcm2708_spi *bs = spi_master_get_devdata(master);
 	u32 cs;
 	char b;
-	struct bcm2708_spi *bs = spi_master_get_devdata(master);
 	unsigned long iflags;
+
 	/* increment type counter */
 	bs->transfers_irqdriven++;
 
@@ -560,7 +558,6 @@ static int bcm2708_transfer_one_message_irqdriven(struct spi_master *master,
 	if (!(flags | FLAGS_LAST_TRANSFER))
 		bs->cs |= SPI_CS_TA | SPI_CS_INTR | SPI_CS_INTD;
 
-	/* set up the spinlock - do we really need to disable interrupts here?*/
 	spin_lock_irqsave(&bs->lock, iflags);
 
 	/* start by setting up the SPI controller */
@@ -570,15 +567,11 @@ static int bcm2708_transfer_one_message_irqdriven(struct spi_master *master,
 
 	/* fill as much of a buffer as possible */
 	while ((bcm2708_rd(bs, SPI_CS) & SPI_CS_TXD) && (bs->tx_len > 0)) {
-		/* store it if requested */
-		if (bs->tx_buf) {
-			b = *(bs->tx_buf);
-			bs->tx_buf++;
-		} else {
+		if (bs->tx_buf)
+			b = *bs->tx_buf++;
+		else
 			b = 0;
-		}
 		bcm2708_wr(bs, SPI_FIFO, b);
-		/* and decrement rx_len */
 		bs->tx_len--;
 	}
 
@@ -600,16 +593,15 @@ static int bcm2708_transfer_one_message_irqdriven(struct spi_master *master,
 static int bcm2708_transfer_one_message_poll(struct spi_master *master,
 					struct bcm2708_spi_state *stp,
 					struct spi_transfer *xfer,
-					int flags
-	) {
+					int flags)
+{
+	struct bcm2708_spi *bs = spi_master_get_devdata(master);
 	u32 cs;
 	char b;
 	const char *tx_buf = xfer->tx_buf;
 	int tx_len = xfer->len;
 	char *rx_buf = xfer->rx_buf;
 	int rx_len = xfer->len;
-
-	struct bcm2708_spi *bs = spi_master_get_devdata(master);
 
 	/* increment type counter */
 	bs->transfers_polling++;
@@ -618,51 +610,42 @@ static int bcm2708_transfer_one_message_poll(struct spi_master *master,
 	cs = stp->cs | SPI_CS_TA;
 	bcm2708_wr(bs, SPI_CLK, stp->cdiv);
 	bcm2708_wr(bs, SPI_CS, cs);
-	/* loop until rxlen is 0 */
 	while ((rx_len > 0)) {
 		cs = bcm2708_rd(bs, SPI_CS);
 		if (cs & SPI_CS_TXD) {
 			if (tx_len > 0) {
-				/* decide on data to send */
-				if (tx_buf) {
-					b = *tx_buf;
-					tx_buf++;
-				} else {
+				if (tx_buf)
+					b = *tx_buf++;
+				else
 					b = 0;
-				}
 				bcm2708_wr(bs, SPI_FIFO, b);
-				/* and decrement rx_len */
 				tx_len--;
 			}
 		}
 		if (cs & SPI_CS_RXD) {
-			/* getting byte from fifo */
 			b = bcm2708_rd(bs, SPI_FIFO);
-			/* store it if requested */
-			if (rx_buf) {
-				*rx_buf = b;
-				rx_buf++;
-			}
-			/* and decrement rx_len */
+			if (rx_buf)
+				*rx_buf++ = b;
 			rx_len--;
 		}
 	}
-	/* and release cs */
+	/* release cs */
 	bcm2708_wr(bs, SPI_CS, stp->cs);
-	/* and return OK */
+
 	return 0;
 }
 
-/* this one sends a message */
 static int bcm2708_transfer_one_message(struct spi_master *master,
-					struct spi_message *msg) {
-	struct spi_transfer *xfer;
+					struct spi_message *msg)
+{
 	struct bcm2708_spi *bs = spi_master_get_devdata(master);
+	struct spi_transfer *xfer;
 	struct spi_device *spi = msg->spi;
 	struct bcm2708_spi_state state;
 	int status = 0;
 	int count = 0;
 	int transfers = 0;
+
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
 		transfers++;
 	}
@@ -671,7 +654,6 @@ static int bcm2708_transfer_one_message(struct spi_master *master,
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
 		int can_dma = 1;
 		int flags = 0;
-		/* increment count */
 		count++;
 		/* calculate flags */
 		if (count == 1) {
