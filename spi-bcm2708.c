@@ -211,9 +211,6 @@ static int bcm2708_setup_state(struct spi_master *master,
 	} else if (hz) {
 		cdiv = DIV_ROUND_UP(bus_hz, hz);
 
-		/* CDIV must be a power of 2, so round up */
-		cdiv = roundup_pow_of_two(cdiv);
-
 		if (cdiv > 65536) {
 			dev_err(dev,
 				"setup: %d Hz too slow, cdiv %u; min %ld Hz\n",
