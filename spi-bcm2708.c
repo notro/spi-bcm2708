@@ -392,9 +392,8 @@ static int bcm2708_transfer_one_message_dma(struct spi_master *master,
 	/* increment type counter */
 	bs->transfers_dmadriven++;
 
-	/* check for length - one page size max !!! */
-	if (xfer->len > 4096) {
-		dev_err(&master->dev, "Max allowed package size exceeded");
+	if (xfer->len > 65536) {
+		dev_err(&master->dev, "Max allowed package size 64k exceeded");
 		return -EINVAL;
 	}
 	/* on first transfer reset the RX/TX */
