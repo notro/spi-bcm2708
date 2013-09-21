@@ -781,7 +781,7 @@ static void bcm2708_spi_cleanup(struct spi_device *spi)
 	spi->controller_state = NULL;
 }
 
-static int __devinit bcm2708_spi_probe(struct platform_device *pdev)
+static int bcm2708_spi_probe(struct platform_device *pdev)
 {
 	struct resource *regs;
 	int irq, err = -ENOMEM;
@@ -941,7 +941,7 @@ out_clk_put:
 	return err;
 }
 
-static int __devexit bcm2708_spi_remove(struct platform_device *pdev)
+static int bcm2708_spi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct bcm2708_spi *bs = spi_master_get_devdata(master);
@@ -980,7 +980,7 @@ static struct platform_driver bcm2708_spi_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= bcm2708_spi_probe,
-	.remove		= __devexit_p(bcm2708_spi_remove),
+	.remove		= bcm2708_spi_remove,
 };
 
 
