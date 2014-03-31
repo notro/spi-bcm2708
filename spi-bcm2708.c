@@ -1000,7 +1000,7 @@ static struct platform_driver bcm2708_spi_driver = {
 
 static int __init bcm2708_spi_init(void)
 {
-	return platform_driver_probe(&bcm2708_spi_driver, bcm2708_spi_probe);
+	return platform_driver_register(&bcm2708_spi_driver);
 }
 module_init(bcm2708_spi_init);
 
