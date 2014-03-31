@@ -51,6 +51,11 @@ static unsigned debug;
 module_param(debug, uint, 0);
 MODULE_PARM_DESC(debug, "Turn on debug output");
 
+/* removed in 3.13 */
+#ifndef INIT_COMPLETION
+#define INIT_COMPLETION(c) reinit_completion(&c)
+#endif
+
 #undef dev_dbg
 #define dev_dbg(dev, fmt, args...)           \
 do {                                         \
