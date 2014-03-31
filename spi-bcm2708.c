@@ -823,6 +823,7 @@ static int bcm2708_spi_probe(struct platform_device *pdev)
 	master->num_chipselect = 3;
 	master->setup = bcm2708_spi_setup;
 	master->cleanup = bcm2708_spi_cleanup;
+	master->dev.of_node = pdev->dev.of_node;
 	master->rt = realtime;
 
 	master->prepare_transfer_hardware       = bcm2708_prepare_transfer;
@@ -894,7 +895,7 @@ static int bcm2708_spi_probe(struct platform_device *pdev)
 	}
 
 	/* initialise the hardware */
-	clk_enable(clk);
+	clk_prepare_enable(clk);
 	bcm2708_wr(bs, SPI_CS, SPI_CS_REN | SPI_CS_CLEAR_RX | SPI_CS_CLEAR_TX);
 
 	err = spi_register_master(master);
@@ -931,6 +932,7 @@ out_free_dma_rx:
 out_free_dma_buffer:
 	bcm2708_release_dmabuffer(pdev, bs);
 out_free_irq:
+	clk_disable_unprepare(bs->clk);
 	free_irq(bs->irq, master);
 out_iounmap:
 	iounmap(bs->base);
@@ -957,7 +959,7 @@ static int bcm2708_spi_remove(struct platform_device *pdev)
 	bs->stopping = true;
 	bcm2708_wr(bs, SPI_CS, SPI_CS_CLEAR_RX | SPI_CS_CLEAR_TX);
 
-	clk_disable(bs->clk);
+	clk_disable_unprepare(bs->clk);
 	clk_put(bs->clk);
 	free_irq(bs->irq, master);
 	iounmap(bs->base);
@@ -974,10 +976,17 @@ static int bcm2708_spi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id bcm2708_spi_match[] = {
+	{ .compatible = "brcm,bcm2708-spi", },
+	{}
+};
+MODULE_DEVICE_TABLE(of, bcm2708_spi_match);
+
 static struct platform_driver bcm2708_spi_driver = {
 	.driver		= {
 		.name	= DRV_NAME,
 		.owner	= THIS_MODULE,
+		.of_match_table	= bcm2708_spi_match,
 	},
 	.probe		= bcm2708_spi_probe,
 	.remove		= bcm2708_spi_remove,
