@@ -441,7 +441,7 @@ static int bcm2708_transfer_one_message_dma(struct spi_master *master,
 		cbs[2].info |= BCM2708_DMA_S_INC; /* source increment by 4 */
 		cbs[2].src = (unsigned long)xfer->tx_dma;
 	} else {
-		cbs[3].info |= BCM2708_DMA_S_IGNORE; /* ignore source */
+		cbs[2].info |= BCM2708_DMA_S_IGNORE; /* ignore source */
 		cbs[2].src = bs->dma_buffer_handle + 127*sizeof(struct bcm2708_dma_cb);
 	}
 	cbs[2].dst = cbs[1].dst;
