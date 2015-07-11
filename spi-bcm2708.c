@@ -36,7 +36,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/dma-mapping.h>
-#include <mach/dma.h>
+#include <linux/platform_data/dma-bcm2708.h>
 #include <linux/moduleparam.h>
 
 static short mode = 2;
